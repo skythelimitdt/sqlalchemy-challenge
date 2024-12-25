@@ -59,18 +59,24 @@ Design a Flask API based on the queries that you just developed
 - For a specified start date and end date, calculate TMIN, TAVG, and TMAX for the dates from the start date to the end date, inclusive.
 
 ## References
-chatgpt: Retrieve the last 12 months of precipitation data
+#### chatgpt: Retrieve the last 12 months of precipitation data
 recent_date=session.query(Measurement.date).order_by(Measurement.date.desc()).first()
 recent_date = dt.datetime.strptime(recent_date[0], '%Y-%m-%d').date()
 one_yr_prior = recent_date - dt.timedelta(days=365)
-chatgpt: Counting the stations and listing them in descending order
+
+##### chatgpt: Show monthly dates and auto rotate the dates: 
+plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+plt.gcf().autofmt_xdate()  # Auto-rotate the dates
+
+#### chatgpt: Counting the stations and listing them in descending order
 station_counts = (
     session.query(Measurement.station, func.count(Measurement.station).label('count'))
     .group_by(Measurement.station)
     .order_by(func.count(Measurement.station).desc())
     .all()
 )
-chatGPT: TMIN,TAVG,TMAX based on start and end dates. 
+#### chatGPT: TMIN,TAVG,TMAX based on start and end dates 
 try:
         # Validate the start date format
         start_date = dt.datetime.strptime(start, '%Y-%m-%d').date()

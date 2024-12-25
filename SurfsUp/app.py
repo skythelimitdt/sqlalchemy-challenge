@@ -97,7 +97,10 @@ def temperatures():
         
     # Return the JSON representation   
     return jsonify(active_station_temp_list)
-
+# 5. Return a JSON list of the minimum temperature, the average temperature, 
+# and the maximum temperature for a specified start or start-end range.
+# For a specified start, calculate TMIN, TAVG, and TMAX for all the dates greater than or equal to the start date.
+# For a specified start date and end date, calculate TMIN, TAVG, and TMAX for the dates from the start date to the end date, inclusive.
 @app.route("/api/v1.0/<start>")
 @app.route("/api/v1.0/<start>/<end>")
 def temperature_stats(start, end=None):
