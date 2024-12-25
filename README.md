@@ -64,11 +64,6 @@ recent_date=session.query(Measurement.date).order_by(Measurement.date.desc()).fi
 recent_date = dt.datetime.strptime(recent_date[0], '%Y-%m-%d').date()
 one_yr_prior = recent_date - dt.timedelta(days=365)
 
-##### chatgpt: Show monthly dates and auto rotate the dates: 
-plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
-plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-plt.gcf().autofmt_xdate()  # Auto-rotate the dates
-
 #### chatgpt: Counting the stations and listing them in descending order
 station_counts = (
     session.query(Measurement.station, func.count(Measurement.station).label('count'))
