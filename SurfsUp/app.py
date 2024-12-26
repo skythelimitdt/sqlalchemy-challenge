@@ -19,8 +19,8 @@ Base = automap_base()
 Base.prepare(autoload_with=engine)
 
 # Save references to each table
-Measurement = Base.classes.measurement
-Station = Base.classes.station
+measurement = Base.classes.measurement
+station = Base.classes.station
 
 # Create our session (link) from Python to the DB
 session=Session(engine)
@@ -40,7 +40,8 @@ def home():
         f"Available routes:<br>"
         f"/api/v1.0/precipitation<br>"
         f"/api/v1.0/stations<br>"
-        f"/api/v1.0/tobs<br/>"
+        f"/api/v1.0/tobs<br>"
+        f"/api/v1.0/enterstartdate(YYYY-MM-DD)/enterenddate(YYYY-MM-DD)<br/>"
     )
 
 
@@ -49,11 +50,11 @@ def home():
 # Return the JSON representation of your dictionary
 @app.route("/api/v1.0/precipitation")
 def prcp():
-    recent_date=session.query(Measurement.date).order_by(Measurement.date.desc()).first()
+    recent_date=session.query(measurement.date).order_by(measurement.date.desc()).first()
     recent_date = dt.datetime.strptime(recent_date[0], '%Y-%m-%d').date()
     one_yr_prior = recent_date - dt.timedelta(days=365)
-    prcp_scores = session.query(Measurement.date, Measurement.prcp). \
-            filter(Measurement.date >= one_yr_prior).order_by(Measurement.date).all()
+    prcp_scores = session.query(measurement.date, measurement.prcp). \
+            filter(measurement.date >= one_yr_prior).order_by(measurement.date).all()
     # Convert the query results to a list of dictionaries
     prcp_list = []
     for date,prcp in prcp_scores:
@@ -69,7 +70,7 @@ def prcp():
 # 3.Return a list of stations from dataset
 @app.route("/api/v1.0/stations")
 def stations():
-    results=session.query(Measurement.station).group_by(Measurement.station).all()
+    results=session.query(measurement.station).group_by(measurement.station).all()
     stations = [station[0] for station in results]
     return jsonify(stations)
 
@@ -78,14 +79,19 @@ def stations():
 @app.route("/api/v1.0/tobs")
 def temperatures():
     # Get the most recent date in the dataset
-    recent_date=session.query(Measurement.date).order_by(Measurement.date.desc()).first()
+    recent_date=session.query(measurement.date).order_by(measurement.date.desc()).first()
     recent_date = dt.datetime.strptime(recent_date[0], '%Y-%m-%d').date()
     one_yr_prior = recent_date - dt.timedelta(days=365)
+    most_active_station = (
+    session.query(measurement.station, func.count(measurement.station).label('count'))
+    .group_by(measurement.station)
+    .order_by(func.count(measurement.station).desc())
+    .first() )
     # Query the dates and temperature observations for the most-active station
-    active_station_results = session.query(Measurement.date, Measurement.tobs). \
-        filter(Measurement.date >= one_yr_prior). \
-        filter(Measurement.station == 'USC00519281'). \
-        order_by(Measurement.date).all()
+    active_station_results = session.query(measurement.date, measurement.tobs). \
+        filter(measurement.date >= one_yr_prior). \
+        filter(measurement.station == most_active_station[0]). \
+        order_by(measurement.date).all()
     # Create a list of dictionaries to hold the results
     active_station_temp_list = []
     for date, tobs in active_station_results:
@@ -104,17 +110,14 @@ def temperatures():
 @app.route("/api/v1.0/<start>")
 @app.route("/api/v1.0/<start>/<end>")
 def temperature_stats(start, end=None):
-    """
-    Return a JSON list of TMIN, TAVG, and TMAX for a given start or start-end range.
-    If no end date is provided, the end date is set to the most recent date in the database.
-    """
+    #Set the start date and end date
     try:
         # Validate the start date format
         start_date = dt.datetime.strptime(start, '%Y-%m-%d').date()
 
         # If no end date is provided, use the most recent date in the database
         if not end:
-            recent_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
+            recent_date = session.query(measurement.date).order_by(measurement.date.desc()).first()
             end_date = dt.datetime.strptime(recent_date[0], '%Y-%m-%d').date()
         else:
             # Validate the end date format
@@ -122,13 +125,13 @@ def temperature_stats(start, end=None):
 
         # Define the query for TMIN, TAVG, and TMAX
         sel = [
-            func.min(Measurement.tobs),
-            func.avg(Measurement.tobs),
-            func.max(Measurement.tobs)
+            func.min(measurement.tobs),
+            func.avg(measurement.tobs),
+            func.max(measurement.tobs)
         ]
 
         # Query for the specified date range
-        results = session.query(*sel).filter(Measurement.date >= start_date, Measurement.date <= end_date).all()
+        results = session.query(*sel).filter(measurement.date >= start_date, measurement.date <= end_date).all()
 
         # Handle empty results
         if not results or results[0][0] is None:
